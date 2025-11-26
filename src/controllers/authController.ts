@@ -84,7 +84,7 @@ export async function zohoCallback(req: Request, res: Response) {
 
     // redirect to frontend
     const FRONTEND = process.env.FRONTEND_URL || "http://localhost:3000";
-    return res.redirect(FRONTEND);
+    return res.redirect(`${FRONTEND}/dashboard`);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error("Zoho callback error", err);
