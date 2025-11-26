@@ -76,11 +76,12 @@ export async function zohoCallback(req: Request, res: Response) {
       { expiresIn: process.env.JWT_EXPIRES_IN || "7d" } as any
     );
     res.cookie(COOKIE_NAME, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 1000 * 60 * 60 * 24 * 7,
-    });
+  httpOnly: true,
+  secure: true,          // REQUIRED for HTTPS
+  sameSite: "none",      // REQUIRED for cross-site cookies
+  maxAge: 1000 * 60 * 60 * 24 * 7,
+});
+
 
     // redirect to frontend
     const FRONTEND = process.env.FRONTEND_URL || "http://localhost:3000";
