@@ -11,7 +11,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-const FRONTEND = process.env.FRONTEND_URL || "http://localhost:3000";
+const FRONTEND = "https://zentra-kappa.vercel.app";
 app.use(
   cors({
     origin: FRONTEND,
