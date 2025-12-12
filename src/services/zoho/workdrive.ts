@@ -23,7 +23,16 @@ export async function uploadFile(
       "X-FILENAME": filename,
     },
   });
-  return res.data;
+  // Try to normalize the response so higher-level code can access ids and download links
+  const data = res.data || {};
+  const fileId =
+    data?.data?.file_id || data?.file_id || data?.id || data?.data?.ID;
+  const downloadUrl =
+    data?.data?.download_url ||
+    data?.download_url ||
+    data?.file_url ||
+    data?.data?.file_url;
+  return { raw: data, file_id: fileId, download_url: downloadUrl };
 }
 
 export default { uploadFile };

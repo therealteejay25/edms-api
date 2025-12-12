@@ -5,6 +5,7 @@
 // - Integrate Zoho Sign by creating a signing request and storing returned signed file as a new version.
 
 import Organization from "../models/Organization";
+import Document from "../models/Document";
 import * as Creator from "./zoho/creator";
 import * as WorkDrive from "./zoho/workdrive";
 import * as Sign from "./zoho/sign";
@@ -44,20 +45,58 @@ export async function onDocumentUpload(doc: any) {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const fs = require("fs");
       const fileStream = fs.createReadStream(filePath);
-      await WorkDrive.uploadFile(
+      const wdResp = await WorkDrive.uploadFile(
         org.zoho.workdriveFolderId,
         fileStream,
         filePath.split("/").pop(),
         zohoAuth
       );
+      // If we receive a useful response from WorkDrive, attempt to persist file id/url and raw response on the Document
+      try {
+        const candidateId =
+          wdResp?.data?.file_id ||
+          wdResp?.file_id ||
+          wdResp?.id ||
+          wdResp?.data?.id ||
+          wdResp?.data?.ID;
+        const candidateUrl =
+          wdResp?.data?.download_url ||
+          wdResp?.download_url ||
+          wdResp?.file_url ||
+          wdResp?.data?.file_url ||
+          wdResp?.data?.downloadUrl;
+        await Document.findByIdAndUpdate(doc._id, {
+          zohoFileId: candidateId,
+          zohoFileUrl: candidateUrl,
+          zohoRawResponse: wdResp,
+        });
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn("Failed to persist WorkDrive response to Document", e);
+      }
     }
-    // Trigger webhook if present
+    // Trigger Zoho webhook if present
     if (org.zoho?.webhookUrl) {
       await axios.post(
         org.zoho.webhookUrl,
         { event: "document.upload", doc },
         { timeout: 5000 }
       );
+    }
+    // Send to any configured notification endpoints for this org (e.g., Slack, email webhook)
+    const notifs: string[] = org?.settings?.notificationUrls || [];
+    for (const url of notifs) {
+      try {
+        await axios.post(
+          url,
+          { event: "document.upload", doc },
+          { timeout: 4000 }
+        );
+      } catch (e) {
+        // don't block main flow
+        // eslint-disable-next-line no-console
+        console.warn("Failed to notify endpoint", url, e?.message || e);
+      }
     }
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -78,6 +117,20 @@ export async function onApproval(approval: any) {
         { timeout: 5000 }
       );
     }
+    // Send to any configured notification endpoints for this org
+    const notifs: string[] = org?.settings?.notificationUrls || [];
+    for (const url of notifs) {
+      try {
+        await axios.post(
+          url,
+          { event: `approval.${approval.status}`, approval },
+          { timeout: 4000 }
+        );
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn("Failed to notify endpoint", url, e?.message || e);
+      }
+    }
     // Could add Creator update or WorkDrive tagging here
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -93,10 +146,11 @@ async function getZohoAuthForOrg(org: any) {
   const global = process.env.ZOHO_ACCESS_TOKEN;
   if (global) return { accessToken: global };
 
+  // Prefer org-level stored tokens
   const orgToken =
-    org?.settings?.zohoAccessToken ||
     org?.zoho?.accessToken ||
-    org?.zoho?.access_token;
+    org?.zoho?.access_token ||
+    org?.settings?.zohoAccessToken;
   if (orgToken) return { accessToken: orgToken };
 
   // find any user in this org with a refresh token
@@ -114,6 +168,19 @@ async function getZohoAuthForOrg(org: any) {
     user.zohoAccessToken = accessToken;
     user.zohoRefreshToken = refreshToken;
     await user.save();
+    // persist at org-level so other users can reuse
+    try {
+      org.zoho = org.zoho || {};
+      org.zoho.accessToken = accessToken;
+      if (refreshToken) org.zoho.refreshToken = refreshToken;
+      await org.save();
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "Failed to persist zoho token at org level",
+        e?.message || e
+      );
+    }
     return { accessToken };
   } catch (err) {
     // eslint-disable-next-line no-console

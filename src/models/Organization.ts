@@ -29,6 +29,9 @@ const OrganizationSchema: Schema = new Schema(
   { timestamps: true }
 );
 
+// Performance index
+OrganizationSchema.index({ name: 1 }, { unique: true });
+
 export default mongoose.model<IOrganization>(
   "Organization",
   OrganizationSchema
