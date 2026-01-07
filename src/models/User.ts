@@ -14,7 +14,10 @@ export interface IUser extends Document {
   password?: string;
   name: string;
   role: "admin" | "department_lead" | "user";
+  // Backward-compatible: org always mirrors activeOrg
   org: mongoose.Types.ObjectId;
+  orgs: mongoose.Types.ObjectId[];
+  activeOrg: mongoose.Types.ObjectId;
   department?: string;
   isActive: boolean;
   zohoId?: string;
@@ -33,7 +36,10 @@ const UserSchema: Schema = new Schema(
       enum: ["admin", "department_lead", "user"],
       default: "user",
     },
+    // org mirrors activeOrg for existing code paths
     org: { type: Schema.Types.ObjectId, ref: "Organization", required: true },
+    orgs: { type: [Schema.Types.ObjectId], ref: "Organization", default: [] },
+    activeOrg: { type: Schema.Types.ObjectId, ref: "Organization" },
     department: { type: String },
     isActive: { type: Boolean, default: true },
     zohoId: { type: String },
@@ -44,9 +50,25 @@ const UserSchema: Schema = new Schema(
 );
 
 // Performance indexes
-UserSchema.index({ email: 1, org: 1 }, { unique: true });
+UserSchema.index({ email: 1 }, { unique: true });
 UserSchema.index({ org: 1, role: 1 });
 UserSchema.index({ org: 1, department: 1 });
+UserSchema.index({ orgs: 1 });
+
+UserSchema.pre<IUser>("save", function (next) {
+  // Ensure activeOrg is always set and org mirrors it.
+  if (!this.activeOrg) {
+    this.activeOrg = this.org;
+  }
+  if (!this.orgs || this.orgs.length === 0) {
+    this.orgs = [this.activeOrg];
+  }
+  if (!this.orgs.some((o: any) => String(o) === String(this.activeOrg))) {
+    this.orgs.push(this.activeOrg);
+  }
+  this.org = this.activeOrg;
+  next();
+});
 
 UserSchema.pre<IUser>("save", async function (next) {
   if (!this.isModified("password") || !this.password) return next();

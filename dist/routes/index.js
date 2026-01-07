@@ -1,0 +1,28 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_1 = __importDefault(require("./auth"));
+const documents_1 = __importDefault(require("./documents"));
+const approvals_1 = __importDefault(require("./approvals"));
+const workflows_1 = __importDefault(require("./workflows"));
+const audit_1 = __importDefault(require("./audit"));
+const zoho_1 = __importDefault(require("./zoho"));
+const users_1 = __importDefault(require("./users"));
+const org_1 = __importDefault(require("./org"));
+const expiry_1 = __importDefault(require("./expiry"));
+const stats_1 = __importDefault(require("./stats"));
+const router = (0, express_1.Router)();
+router.use("/auth", auth_1.default);
+router.use("/documents", documents_1.default);
+router.use("/approvals", approvals_1.default);
+router.use("/workflows", workflows_1.default);
+router.use("/audit", audit_1.default);
+router.use("/zoho", zoho_1.default);
+router.use("/users", users_1.default);
+router.use("/org", org_1.default);
+router.use("/expiry", expiry_1.default);
+router.use("/stats", stats_1.default);
+exports.default = router;

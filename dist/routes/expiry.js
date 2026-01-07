@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_1 = require("../middlewares/auth");
+const roles_1 = require("../middlewares/roles");
+const expiryController_1 = require("../controllers/expiryController");
+const router = (0, express_1.Router)();
+router.use(auth_1.auth);
+router.get("/", expiryController_1.getExpiringDocuments);
+router.post("/reminders", roles_1.requireOrgAdmin, expiryController_1.sendExpiryReminders);
+router.post("/archive", roles_1.requireOrgAdmin, expiryController_1.archiveExpiredDocuments);
+exports.default = router;

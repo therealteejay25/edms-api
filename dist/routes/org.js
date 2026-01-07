@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_1 = require("../middlewares/auth");
+const roles_1 = require("../middlewares/roles");
+const orgController_1 = require("../controllers/orgController");
+const router = (0, express_1.Router)();
+router.use(auth_1.auth);
+router.get("/", orgController_1.getOrg);
+router.post("/", roles_1.requireOrgAdmin, orgController_1.updateOrg);
+router.get("/departments", orgController_1.listDepartments);
+router.post("/departments", roles_1.requireOrgAdmin, orgController_1.addDepartment);
+router.delete("/departments/:name", roles_1.requireOrgAdmin, orgController_1.removeDepartment);
+exports.default = router;

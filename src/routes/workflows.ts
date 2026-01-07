@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { auth } from "../middlewares/auth";
-import { requireOrgAdmin } from "../middlewares/roles";
+import { requireDepartmentLead } from "../middlewares/roles";
 import {
   listWorkflows,
   createWorkflow,
@@ -16,10 +16,10 @@ router.use(auth);
 
 // Workflow CRUD - admin only
 router.get("/", listWorkflows);
-router.post("/", requireOrgAdmin, createWorkflow);
+router.post("/", requireDepartmentLead, createWorkflow);
 router.get("/:id", getWorkflow);
-router.put("/:id", requireOrgAdmin, updateWorkflow);
-router.delete("/:id", requireOrgAdmin, deleteWorkflow);
+router.put("/:id", requireDepartmentLead, updateWorkflow);
+router.delete("/:id", requireDepartmentLead, deleteWorkflow);
 
 // Testing
 router.post("/:id/test", testWorkflow);

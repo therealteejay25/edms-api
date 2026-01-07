@@ -21,6 +21,11 @@ export async function auth(
     const payload: any = jwt.verify(token, secret);
     const user = await User.findById(payload.id).select("-password");
     if (!user) return res.status(401).json({ message: "Unauthorized" });
+    if ((user as any).activeOrg) {
+      (user as any).org = (user as any).activeOrg;
+    } else {
+      (user as any).activeOrg = (user as any).org;
+    }
     req.user = user;
     next();
   } catch (err) {

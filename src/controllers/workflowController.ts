@@ -21,12 +21,24 @@ export async function createWorkflow(req: Request, res: Response) {
     const user = req.user;
     const { name, description, trigger, triggerValue, steps } = req.body;
 
+     if (user.role === "department_lead") {
+      if (!user.department) {
+        return res.status(400).json({ message: "Department is required" });
+      }
+      if (trigger !== "department") {
+        return res.status(403).json({ message: "Department leads can only create department workflows" });
+      }
+    }
+
+    const effectiveTriggerValue =
+      user.role === "department_lead" ? user.department : triggerValue;
+
     const workflow = await Workflow.create({
       org: user.org,
       name,
       description,
       trigger,
-      triggerValue,
+      triggerValue: effectiveTriggerValue,
       steps,
       enabled: true,
     });
@@ -61,9 +73,33 @@ export async function updateWorkflow(req: Request, res: Response) {
       enabled,
     } = req.body;
 
+    const existing = await Workflow.findOne({ _id: id, org: user.org });
+    if (!existing) return res.status(404).json({ message: "Not found" });
+
+    if (user.role === "department_lead") {
+      if (!user.department) {
+        return res.status(400).json({ message: "Department is required" });
+      }
+      if (existing.trigger !== "department" || existing.triggerValue !== user.department) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      if (trigger && trigger !== "department") {
+        return res.status(403).json({ message: "Department leads can only manage department workflows" });
+      }
+      if (triggerValue && triggerValue !== user.department) {
+        return res.status(403).json({ message: "Cannot change department" });
+      }
+    }
+
+    const update: any = { name, description, trigger, triggerValue, steps, enabled };
+    if (user.role === "department_lead") {
+      update.trigger = "department";
+      update.triggerValue = user.department;
+    }
+
     const workflow = await Workflow.findOneAndUpdate(
       { _id: id, org: user.org },
-      { name, description, trigger, triggerValue, steps, enabled },
+      update,
       { new: true }
     );
 
@@ -91,6 +127,17 @@ export async function deleteWorkflow(req: Request, res: Response) {
     // @ts-ignore
     const user = req.user;
 
+    if (user.role === "department_lead") {
+      if (!user.department) {
+        return res.status(400).json({ message: "Department is required" });
+      }
+      const existing = await Workflow.findOne({ _id: id, org: user.org });
+      if (!existing) return res.status(404).json({ message: "Not found" });
+      if (existing.trigger !== "department" || existing.triggerValue !== user.department) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+    }
+
     const workflow = await Workflow.findOneAndDelete({
       _id: id,
       org: user.org,
@@ -98,13 +145,15 @@ export async function deleteWorkflow(req: Request, res: Response) {
 
     if (!workflow) return res.status(404).json({ message: "Not found" });
 
+    const deletedName = (workflow as any)?.name;
+
     await AuditLog.create({
       org: user.org,
       user: user._id,
       action: "workflow_deleted",
       resource: "workflow",
       resourceId: id,
-      metadata: { name: workflow.name },
+      metadata: { name: deletedName },
     });
 
     res.json({ ok: true });
