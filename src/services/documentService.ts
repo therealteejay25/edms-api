@@ -1,6 +1,7 @@
 import Document from "../models/Document";
 import AuditLog from "../models/AuditLog";
 import { ObjectId } from "mongoose";
+import mongoose from "mongoose";
 import path from "path";
 import fs from "fs/promises";
 
@@ -239,8 +240,11 @@ export class DocumentService {
   /**
    * Get audit trail for document
    */
-  static async getDocumentAudit(docId: ObjectId) {
-    return AuditLog.find({ resourceId: docId })
+  static async getDocumentAudit(docId: mongoose.Types.ObjectId | string) {
+    const normalizedId =
+      typeof docId === "string" ? new mongoose.Types.ObjectId(docId) : docId;
+
+    return AuditLog.find({ resourceId: normalizedId })
       .populate("user")
       .sort({ createdAt: -1 });
   }

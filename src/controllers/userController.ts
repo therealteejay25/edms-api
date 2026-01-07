@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import User from "../models/User";
+import Organization from "../models/Organization";
 
 export async function listUsers(req: Request, res: Response) {
   try {
@@ -20,7 +21,7 @@ export async function updateUserRole(req: Request, res: Response) {
   try {
     const { id } = req.params;
     const { role } = req.body as { role?: string };
-    if (!role || (role !== "admin" && role !== "user"))
+    if (!role || (role !== "admin" && role !== "department_lead" && role !== "user"))
       return res.status(400).json({ message: "Invalid role" });
     // @ts-ignore
     const user = req.user;
@@ -152,4 +153,41 @@ export async function deleteUser(req: Request, res: Response) {
   }
 }
 
-export default { listUsers, updateUserRole, createUser, updateUser, deleteUser };
+export async function setMyDepartment(req: Request, res: Response) {
+  try {
+    // @ts-ignore
+    const currentUser = req.user;
+    const { department } = req.body as { department?: string };
+    const dept = String(department || "").trim();
+    if (!dept) return res.status(400).json({ message: "Department is required" });
+
+    const org = await Organization.findById(currentUser.org).select("departments");
+    if (!org) return res.status(404).json({ message: "Org not found" });
+    const allowed = (org.departments || []).some(
+      (d: any) => String(d).toLowerCase() === dept.toLowerCase()
+    );
+    if (!allowed) {
+      return res.status(400).json({ message: "Invalid department" });
+    }
+
+    const user = await User.findById(currentUser._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    user.department = dept;
+    await user.save();
+
+    res.json({ ok: true, user: { _id: user._id, department: user.department } });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(err);
+    res.status(500).json({ message: "Failed to set department" });
+  }
+}
+
+export default {
+  listUsers,
+  updateUserRole,
+  createUser,
+  updateUser,
+  deleteUser,
+  setMyDepartment,
+};

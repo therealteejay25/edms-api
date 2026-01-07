@@ -9,21 +9,44 @@ import DocumentService from "../services/documentService";
 import AuditLog from "../models/AuditLog";
 import Workflow from "../models/Workflow";
 import WorkflowService from "../services/workflowService";
+import Organization from "../models/Organization";
 
 // Create a document with file upload
 export async function createDocument(req: Request, res: Response) {
   try {
     // @ts-ignore
     const user = req.user;
+    if (user.role !== "admin" && !user.department) {
+      return res.status(400).json({ message: "Department is required" });
+    }
     const org = req.body.org || user.org;
     if (!req.file) return res.status(400).json({ message: "file required" });
+
+    // Department enforcement + validation
+    const requestedDepartment = String(req.body.department || "").trim();
+    const department =
+      user.role === "admin" ? requestedDepartment : String(user.department || "");
+    if (!department) {
+      return res.status(400).json({ message: "department is required" });
+    }
+
+    const orgDoc = await Organization.findById(org).select("departments");
+    if (orgDoc && Array.isArray(orgDoc.departments) && orgDoc.departments.length) {
+      const allowed = orgDoc.departments.some(
+        (d: any) => String(d).toLowerCase() === department.toLowerCase()
+      );
+      if (!allowed) {
+        return res.status(400).json({ message: "Invalid department" });
+      }
+    }
+
     const fileUrl = path
       .relative(process.cwd(), req.file.path)
       .replace(/\\/g, "/");
     const doc = await Document.create({
       title: req.body.title,
       type: req.body.type,
-      department: req.body.department,
+      department,
       effectiveDate: req.body.effectiveDate,
       expiryDate: req.body.expiryDate,
       status: req.body.status || "draft",
@@ -114,10 +137,16 @@ export async function listDocuments(req: Request, res: Response) {
     // @ts-ignore
     const user = req.user;
 
+    if (user.role !== "admin" && !user.department) {
+      return res.status(400).json({ message: "Department is required" });
+    }
+
+    const scopedDepartment = user.role === "admin" ? department : user.department;
+
     const filters: any = {
       search,
       type,
-      department,
+      department: scopedDepartment,
       status,
       owner: req.query.owner ? req.query.owner : undefined,
       skipArchived: skipArchived !== "false",
@@ -154,7 +183,17 @@ export async function getDocument(req: Request, res: Response) {
     const { id } = req.params;
     // @ts-ignore
     const user = req.user;
-    const doc = await Document.findOne({ _id: id, org: user.org })
+
+    if (user.role !== "admin" && !user.department) {
+      return res.status(400).json({ message: "Department is required" });
+    }
+
+    const query: any = { _id: id, org: user.org };
+    if (user.role !== "admin") {
+      query.department = user.department;
+    }
+
+    const doc = await Document.findOne(query)
       .populate("owner", "name email")
       .populate("approvalChain", "name email");
 

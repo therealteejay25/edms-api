@@ -2,6 +2,7 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface IOrganization extends Document {
   name: string;
+  departments?: string[];
   settings?: Record<string, any>;
   // Zoho related configuration for this organization
   zoho?: {
@@ -17,6 +18,7 @@ export interface IOrganization extends Document {
 const OrganizationSchema: Schema = new Schema(
   {
     name: { type: String, required: true },
+    departments: { type: [String], default: [] },
     settings: { type: Schema.Types.Mixed, default: {} },
     zoho: {
       enabled: { type: Boolean, default: false },

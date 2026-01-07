@@ -6,12 +6,15 @@ import {
   updateUserRole, 
   createUser, 
   updateUser, 
-  deleteUser 
+  deleteUser,
+  setMyDepartment,
 } from "../controllers/userController";
 
 const router = Router();
 
 router.use(auth);
+
+router.post("/me/department", setMyDepartment);
 
 router.get("/", listUsers);
 router.post("/", isAdmin, createUser);

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import AuditLog from "../models/AuditLog";
 import DocumentService from "../services/documentService";
+import mongoose from "mongoose";
 
 export async function getAuditLog(req: Request, res: Response) {
   try {
@@ -14,6 +15,8 @@ export async function getAuditLog(req: Request, res: Response) {
       limit,
       dateFrom,
       dateTo,
+      startDate,
+      endDate,
     } = req.query as any;
 
     const query: any = { org: user.org };
@@ -22,22 +25,27 @@ export async function getAuditLog(req: Request, res: Response) {
     if (resourceId) query.resourceId = resourceId;
     if (action) query.action = action;
 
-    if (dateFrom || dateTo) {
+    const normalizedDateFrom = dateFrom || startDate;
+    const normalizedDateTo = dateTo || endDate;
+
+    if (normalizedDateFrom || normalizedDateTo) {
       query.createdAt = {};
-      if (dateFrom) query.createdAt.$gte = new Date(dateFrom);
-      if (dateTo) query.createdAt.$lte = new Date(dateTo);
+      if (normalizedDateFrom) query.createdAt.$gte = new Date(normalizedDateFrom);
+      if (normalizedDateTo) query.createdAt.$lte = new Date(normalizedDateTo);
     }
 
-    const skip = (parseInt(page) || 1 - 1) * (parseInt(limit) || 50);
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 50;
+    const skip = (pageNum - 1) * limitNum;
     const total = await AuditLog.countDocuments(query);
 
     const logs = await AuditLog.find(query)
       .populate("user", "name email")
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(parseInt(limit) || 50);
+      .limit(limitNum);
 
-    res.json({ logs, total, page: parseInt(page) || 1 });
+    res.json({ logs, total, page: pageNum });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to get audit log" });
@@ -49,6 +57,10 @@ export async function getDocumentAudit(req: Request, res: Response) {
     const { docId } = req.params;
     // @ts-ignore
     const user = req.user;
+
+    if (!mongoose.Types.ObjectId.isValid(docId)) {
+      return res.status(400).json({ message: "Invalid document id" });
+    }
 
     const logs = await DocumentService.getDocumentAudit(docId);
 
@@ -86,7 +98,7 @@ export async function exportAuditLog(req: Request, res: Response) {
       ),
       ...logs.map((log) =>
         [
-          log.createdAt?.toISOString() || "",
+          (log as any).createdAt?.toISOString() || "",
           (log.user as any)?.email || "",
           log.action,
           log.resource,

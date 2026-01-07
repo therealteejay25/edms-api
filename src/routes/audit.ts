@@ -15,8 +15,8 @@ router.use(auth);
 
 // Audit logging
 router.get("/", getAuditLog);
-router.get("/:docId/document", getDocumentAudit);
 router.get("/export", exportAuditLog);
+router.get("/:docId/document", getDocumentAudit);
 
 // Retention management - admin only
 router.post("/retention/check", requireOrgAdmin, checkRetention);
