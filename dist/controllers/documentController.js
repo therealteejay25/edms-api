@@ -270,7 +270,7 @@ async function getVersionHistory(req, res) {
         const doc = await Document_1.default.findOne({ _id: id, org: user.org });
         if (!doc)
             return res.status(404).json({ message: "Not found" });
-        const history = await documentService_1.default.getVersionHistory(id);
+        const history = await documentService_1.default.getVersionHistory(String(id));
         res.json({ history });
     }
     catch (err) {
@@ -287,7 +287,7 @@ async function restoreVersion(req, res) {
         const doc = await Document_1.default.findOne({ _id: id, org: user.org });
         if (!doc)
             return res.status(404).json({ message: "Not found" });
-        const restored = await documentService_1.default.restoreVersion(id, version, user._id);
+        const restored = await documentService_1.default.restoreVersion(String(id), version, String(user._id));
         res.json({ doc: restored });
     }
     catch (err) {
@@ -437,7 +437,7 @@ async function archiveDocument(req, res) {
         const doc = await Document_1.default.findOne({ _id: id, org: user.org });
         if (!doc)
             return res.status(404).json({ message: "Not found" });
-        const archived = await documentService_1.default.archiveDocument(id, user._id);
+        const archived = await documentService_1.default.archiveDocument(String(id), String(user._id));
         res.json({ doc: archived });
     }
     catch (err) {
@@ -454,7 +454,7 @@ async function setLegalHold(req, res) {
         const doc = await Document_1.default.findOne({ _id: id, org: user.org });
         if (!doc)
             return res.status(404).json({ message: "Not found" });
-        const updated = await documentService_1.default.setLegalHold(id, hold, user._id);
+        const updated = await documentService_1.default.setLegalHold(String(id), hold, String(user._id));
         res.json({ doc: updated });
     }
     catch (err) {
@@ -471,7 +471,7 @@ async function addTags(req, res) {
         const doc = await Document_1.default.findOne({ _id: id, org: user.org });
         if (!doc)
             return res.status(404).json({ message: "Not found" });
-        const updated = await documentService_1.default.addTags(id, tags);
+        const updated = await documentService_1.default.addTags(String(id), tags);
         await AuditLog_1.default.create({
             org: doc.org,
             user: user._id,

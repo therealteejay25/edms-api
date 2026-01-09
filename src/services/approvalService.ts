@@ -1,22 +1,24 @@
 import Approval from "../models/Approval";
 import Document from "../models/Document";
 import AuditLog from "../models/AuditLog";
-import { ObjectId } from "mongoose";
+import mongoose from "mongoose";
 
 export class ApprovalService {
   /**
    * Approve a document
    */
   static async approveDocument(
-    approvalId: ObjectId,
-    userId: ObjectId,
+    approvalId: string | mongoose.Types.ObjectId,
+    userId: string | mongoose.Types.ObjectId,
     comment?: string
   ) {
+    const approvalObjectId = new mongoose.Types.ObjectId(String(approvalId));
+    const userObjectId = new mongoose.Types.ObjectId(String(userId));
     const approval = await Approval.findByIdAndUpdate(
-      approvalId,
+      approvalObjectId,
       {
         status: "approved",
-        decidedBy: userId,
+        decidedBy: userObjectId,
         decidedAt: new Date(),
         comment,
       },
@@ -26,7 +28,7 @@ export class ApprovalService {
     if (approval) {
       await AuditLog.create({
         org: approval.org,
-        user: userId,
+        user: userObjectId,
         action: "document_approved",
         resource: "approval",
         resourceId: approval._id,
@@ -41,15 +43,17 @@ export class ApprovalService {
    * Reject a document
    */
   static async rejectDocument(
-    approvalId: ObjectId,
-    userId: ObjectId,
+    approvalId: string | mongoose.Types.ObjectId,
+    userId: string | mongoose.Types.ObjectId,
     comment?: string
   ) {
+    const approvalObjectId = new mongoose.Types.ObjectId(String(approvalId));
+    const userObjectId = new mongoose.Types.ObjectId(String(userId));
     const approval = await Approval.findByIdAndUpdate(
-      approvalId,
+      approvalObjectId,
       {
         status: "rejected",
-        decidedBy: userId,
+        decidedBy: userObjectId,
         decidedAt: new Date(),
         comment,
       },
@@ -66,7 +70,7 @@ export class ApprovalService {
 
       await AuditLog.create({
         org: approval.org,
-        user: userId,
+        user: userObjectId,
         action: "document_rejected",
         resource: "approval",
         resourceId: approval._id,
@@ -80,10 +84,15 @@ export class ApprovalService {
   /**
    * Get pending approvals for user
    */
-  static async getPendingApprovalsForUser(userId: ObjectId, orgId: ObjectId) {
+  static async getPendingApprovalsForUser(
+    userId: string | mongoose.Types.ObjectId,
+    orgId: string | mongoose.Types.ObjectId
+  ) {
+    const userObjectId = new mongoose.Types.ObjectId(String(userId));
+    const orgObjectId = new mongoose.Types.ObjectId(String(orgId));
     return Approval.find({
-      org: orgId,
-      $or: [{ assignee: userId }, { escalatedTo: userId }],
+      org: orgObjectId,
+      $or: [{ assignee: userObjectId }, { escalatedTo: userObjectId }],
       status: { $in: ["pending", "escalated"] },
     })
       .populate("docId")
@@ -94,7 +103,8 @@ export class ApprovalService {
   /**
    * Get all approvals for a document
    */
-  static async getDocumentApprovals(docId: ObjectId) {
+  static async getDocumentApprovals(docId: string | mongoose.Types.ObjectId) {
+    const docObjectId = new mongoose.Types.ObjectId(String(docId));
     return Approval.find({ docId })
       .populate("decidedBy")
       .populate("assignee")
@@ -104,8 +114,9 @@ export class ApprovalService {
   /**
    * Check approval status for document
    */
-  static async getApprovalStatus(docId: ObjectId) {
-    const approvals = await Approval.find({ docId });
+  static async getApprovalStatus(docId: string | mongoose.Types.ObjectId) {
+    const docObjectId = new mongoose.Types.ObjectId(String(docId));
+    const approvals = await Approval.find({ docId: docObjectId });
 
     const totalApprovals = approvals.length;
     const approved = approvals.filter((a) => a.status === "approved").length;
@@ -126,13 +137,15 @@ export class ApprovalService {
    * Mass approve for department lead (all docs from their department)
    */
   static async bulkApproveByDepartment(
-    userId: ObjectId,
+    userId: string | mongoose.Types.ObjectId,
     department: string,
-    orgId: ObjectId
+    orgId: string | mongoose.Types.ObjectId
   ) {
+    const userObjectId = new mongoose.Types.ObjectId(String(userId));
+    const orgObjectId = new mongoose.Types.ObjectId(String(orgId));
     const approvals = await Approval.find({
-      org: orgId,
-      assignee: userId,
+      org: orgObjectId,
+      assignee: userObjectId,
       status: "pending",
     }).populate("docId");
 
@@ -144,7 +157,7 @@ export class ApprovalService {
       { _id: { $in: docIds } },
       {
         status: "approved",
-        decidedBy: userId,
+        decidedBy: userObjectId,
         decidedAt: new Date(),
       }
     );

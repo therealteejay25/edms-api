@@ -45,7 +45,7 @@ export async function onDocumentUpload(doc: any) {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const fs = require("fs");
       const fileStream = fs.createReadStream(filePath);
-      const wdResp = await WorkDrive.uploadFile(
+      const wdResp: any = await WorkDrive.uploadFile(
         org.zoho.workdriveFolderId,
         fileStream,
         filePath.split("/").pop(),
@@ -95,7 +95,7 @@ export async function onDocumentUpload(doc: any) {
       } catch (e) {
         // don't block main flow
         // eslint-disable-next-line no-console
-        console.warn("Failed to notify endpoint", url, e?.message || e);
+        console.warn("Failed to notify endpoint", url, (e as any)?.message || e);
       }
     }
   } catch (err) {
@@ -128,7 +128,7 @@ export async function onApproval(approval: any) {
         );
       } catch (e) {
         // eslint-disable-next-line no-console
-        console.warn("Failed to notify endpoint", url, e?.message || e);
+        console.warn("Failed to notify endpoint", url, (e as any)?.message || e);
       }
     }
     // Could add Creator update or WorkDrive tagging here
@@ -178,7 +178,7 @@ async function getZohoAuthForOrg(org: any) {
       // eslint-disable-next-line no-console
       console.warn(
         "Failed to persist zoho token at org level",
-        e?.message || e
+        (e as any)?.message || e
       );
     }
     return { accessToken };

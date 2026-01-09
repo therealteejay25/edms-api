@@ -7,21 +7,24 @@ exports.ApprovalService = void 0;
 const Approval_1 = __importDefault(require("../models/Approval"));
 const Document_1 = __importDefault(require("../models/Document"));
 const AuditLog_1 = __importDefault(require("../models/AuditLog"));
+const mongoose_1 = __importDefault(require("mongoose"));
 class ApprovalService {
     /**
      * Approve a document
      */
     static async approveDocument(approvalId, userId, comment) {
-        const approval = await Approval_1.default.findByIdAndUpdate(approvalId, {
+        const approvalObjectId = new mongoose_1.default.Types.ObjectId(String(approvalId));
+        const userObjectId = new mongoose_1.default.Types.ObjectId(String(userId));
+        const approval = await Approval_1.default.findByIdAndUpdate(approvalObjectId, {
             status: "approved",
-            decidedBy: userId,
+            decidedBy: userObjectId,
             decidedAt: new Date(),
             comment,
         }, { new: true });
         if (approval) {
             await AuditLog_1.default.create({
                 org: approval.org,
-                user: userId,
+                user: userObjectId,
                 action: "document_approved",
                 resource: "approval",
                 resourceId: approval._id,
@@ -34,9 +37,11 @@ class ApprovalService {
      * Reject a document
      */
     static async rejectDocument(approvalId, userId, comment) {
-        const approval = await Approval_1.default.findByIdAndUpdate(approvalId, {
+        const approvalObjectId = new mongoose_1.default.Types.ObjectId(String(approvalId));
+        const userObjectId = new mongoose_1.default.Types.ObjectId(String(userId));
+        const approval = await Approval_1.default.findByIdAndUpdate(approvalObjectId, {
             status: "rejected",
-            decidedBy: userId,
+            decidedBy: userObjectId,
             decidedAt: new Date(),
             comment,
         }, { new: true });
@@ -49,7 +54,7 @@ class ApprovalService {
             }
             await AuditLog_1.default.create({
                 org: approval.org,
-                user: userId,
+                user: userObjectId,
                 action: "document_rejected",
                 resource: "approval",
                 resourceId: approval._id,
@@ -62,9 +67,11 @@ class ApprovalService {
      * Get pending approvals for user
      */
     static async getPendingApprovalsForUser(userId, orgId) {
+        const userObjectId = new mongoose_1.default.Types.ObjectId(String(userId));
+        const orgObjectId = new mongoose_1.default.Types.ObjectId(String(orgId));
         return Approval_1.default.find({
-            org: orgId,
-            $or: [{ assignee: userId }, { escalatedTo: userId }],
+            org: orgObjectId,
+            $or: [{ assignee: userObjectId }, { escalatedTo: userObjectId }],
             status: { $in: ["pending", "escalated"] },
         })
             .populate("docId")
@@ -75,6 +82,7 @@ class ApprovalService {
      * Get all approvals for a document
      */
     static async getDocumentApprovals(docId) {
+        const docObjectId = new mongoose_1.default.Types.ObjectId(String(docId));
         return Approval_1.default.find({ docId })
             .populate("decidedBy")
             .populate("assignee")
@@ -84,7 +92,8 @@ class ApprovalService {
      * Check approval status for document
      */
     static async getApprovalStatus(docId) {
-        const approvals = await Approval_1.default.find({ docId });
+        const docObjectId = new mongoose_1.default.Types.ObjectId(String(docId));
+        const approvals = await Approval_1.default.find({ docId: docObjectId });
         const totalApprovals = approvals.length;
         const approved = approvals.filter((a) => a.status === "approved").length;
         const rejected = approvals.filter((a) => a.status === "rejected").length;
@@ -102,9 +111,11 @@ class ApprovalService {
      * Mass approve for department lead (all docs from their department)
      */
     static async bulkApproveByDepartment(userId, department, orgId) {
+        const userObjectId = new mongoose_1.default.Types.ObjectId(String(userId));
+        const orgObjectId = new mongoose_1.default.Types.ObjectId(String(orgId));
         const approvals = await Approval_1.default.find({
-            org: orgId,
-            assignee: userId,
+            org: orgObjectId,
+            assignee: userObjectId,
             status: "pending",
         }).populate("docId");
         const docIds = approvals
@@ -112,7 +123,7 @@ class ApprovalService {
             .map((a) => a._id);
         return Approval_1.default.updateMany({ _id: { $in: docIds } }, {
             status: "approved",
-            decidedBy: userId,
+            decidedBy: userObjectId,
             decidedAt: new Date(),
         });
     }

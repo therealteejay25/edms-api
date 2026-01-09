@@ -8,10 +8,10 @@ function ensureDir(dir: string) {
 }
 
 export const storage = multer.diskStorage({
-  destination: async (
+  destination: (
     req: Request,
     file: Express.Multer.File,
-    cb: (error: Error | null, destination?: string) => void
+    cb: (error: Error | null, destination: string) => void
   ) => {
     // Prefer org in body, fallback to req.user.org if available
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -26,13 +26,14 @@ export const storage = multer.diskStorage({
       department,
       type
     );
-    await ensureDir(dest);
-    cb(null, dest);
+    ensureDir(dest)
+      .then(() => cb(null, dest))
+      .catch((e: any) => cb(e, dest));
   },
   filename: (
     _req: Request,
     file: Express.Multer.File,
-    cb: (error: Error | null, filename?: string) => void
+    cb: (error: Error | null, filename: string) => void
   ) => {
     const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}-${
       file.originalname

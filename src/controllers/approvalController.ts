@@ -57,8 +57,8 @@ export async function approve(req: Request, res: Response) {
     const user = req.user;
 
     const approval = await ApprovalService.approveDocument(
-      id,
-      user._id,
+      String(id),
+      String(user._id),
       comment
     );
 
@@ -94,8 +94,8 @@ export async function reject(req: Request, res: Response) {
     const user = req.user;
 
     const approval = await ApprovalService.rejectDocument(
-      id,
-      user._id,
+      String(id),
+      String(user._id),
       comment
     );
 
@@ -127,7 +127,7 @@ export async function reject(req: Request, res: Response) {
 export async function getApprovalStatus(req: Request, res: Response) {
   try {
     const { docId } = req.params;
-    const status = await ApprovalService.getApprovalStatus(docId);
+    const status = await ApprovalService.getApprovalStatus(String(docId));
     res.json({ status });
   } catch (err) {
     console.error(err);
@@ -142,7 +142,10 @@ export async function escalateApproval(req: Request, res: Response) {
     // @ts-ignore
     const user = req.user;
 
-    const approval = await WorkflowService.escalateApproval(id, escalateToId);
+    const approval = await WorkflowService.escalateApproval(
+      String(id),
+      String(escalateToId)
+    );
 
     await AuditLog.create({
       org: approval?.org,
@@ -175,7 +178,7 @@ export async function getOverdueApprovals(req: Request, res: Response) {
 export async function sendReminderNotification(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const result = await WorkflowService.sendApprovalReminder(id);
+    const result = await WorkflowService.sendApprovalReminder(String(id));
     res.json({ result });
   } catch (err) {
     console.error(err);
@@ -190,9 +193,9 @@ export async function bulkApprove(req: Request, res: Response) {
     const { department } = req.body;
 
     const result = await ApprovalService.bulkApproveByDepartment(
-      user._id,
+      String(user._id),
       department,
-      user.org
+      String(user.org)
     );
 
     await AuditLog.create({

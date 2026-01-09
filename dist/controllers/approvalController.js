@@ -63,7 +63,7 @@ async function approve(req, res) {
         const { comment } = req.body;
         // @ts-ignore
         const user = req.user;
-        const approval = await approvalService_1.default.approveDocument(id, user._id, comment);
+        const approval = await approvalService_1.default.approveDocument(String(id), String(user._id), comment);
         if (approval) {
             const doc = await Document_1.default.findById(approval.docId);
             if (doc) {
@@ -90,7 +90,7 @@ async function reject(req, res) {
         const { comment } = req.body;
         // @ts-ignore
         const user = req.user;
-        const approval = await approvalService_1.default.rejectDocument(id, user._id, comment);
+        const approval = await approvalService_1.default.rejectDocument(String(id), String(user._id), comment);
         if (approval) {
             const doc = await Document_1.default.findById(approval.docId);
             if (doc) {
@@ -115,7 +115,7 @@ async function reject(req, res) {
 async function getApprovalStatus(req, res) {
     try {
         const { docId } = req.params;
-        const status = await approvalService_1.default.getApprovalStatus(docId);
+        const status = await approvalService_1.default.getApprovalStatus(String(docId));
         res.json({ status });
     }
     catch (err) {
@@ -129,7 +129,7 @@ async function escalateApproval(req, res) {
         const { escalateToId } = req.body;
         // @ts-ignore
         const user = req.user;
-        const approval = await workflowService_1.default.escalateApproval(id, escalateToId);
+        const approval = await workflowService_1.default.escalateApproval(String(id), String(escalateToId));
         await AuditLog_1.default.create({
             org: approval?.org,
             user: user._id,
@@ -160,7 +160,7 @@ async function getOverdueApprovals(req, res) {
 async function sendReminderNotification(req, res) {
     try {
         const { id } = req.params;
-        const result = await workflowService_1.default.sendApprovalReminder(id);
+        const result = await workflowService_1.default.sendApprovalReminder(String(id));
         res.json({ result });
     }
     catch (err) {
@@ -173,7 +173,7 @@ async function bulkApprove(req, res) {
         // @ts-ignore
         const user = req.user;
         const { department } = req.body;
-        const result = await approvalService_1.default.bulkApproveByDepartment(user._id, department, user.org);
+        const result = await approvalService_1.default.bulkApproveByDepartment(String(user._id), department, String(user.org));
         await AuditLog_1.default.create({
             org: user.org,
             user: user._id,

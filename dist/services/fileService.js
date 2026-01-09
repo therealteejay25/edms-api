@@ -12,7 +12,7 @@ function ensureDir(dir) {
     return promises_1.default.mkdir(dir, { recursive: true }).catch(() => { });
 }
 exports.storage = multer_1.default.diskStorage({
-    destination: async (req, file, cb) => {
+    destination: (req, file, cb) => {
         // Prefer org in body, fallback to req.user.org if available
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
@@ -20,8 +20,9 @@ exports.storage = multer_1.default.diskStorage({
         const department = req.body.department || "general";
         const type = req.body.type || "misc";
         const dest = path_1.default.join(process.cwd(), "uploads", String(org), department, type);
-        await ensureDir(dest);
-        cb(null, dest);
+        ensureDir(dest)
+            .then(() => cb(null, dest))
+            .catch((e) => cb(e, dest));
     },
     filename: (_req, file, cb) => {
         const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}-${file.originalname}`;

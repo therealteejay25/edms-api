@@ -7,13 +7,15 @@ exports.WorkflowService = void 0;
 const Workflow_1 = __importDefault(require("../models/Workflow"));
 const Approval_1 = __importDefault(require("../models/Approval"));
 const Document_1 = __importDefault(require("../models/Document"));
+const mongoose_1 = __importDefault(require("mongoose"));
 class WorkflowService {
     /**
      * Get workflow by trigger (document type or department)
      */
     static async getWorkflowForDocument(orgId, docType, department) {
+        const orgObjectId = new mongoose_1.default.Types.ObjectId(String(orgId));
         return Workflow_1.default.findOne({
-            org: orgId,
+            org: orgObjectId,
             enabled: true,
             $or: [
                 { trigger: "document_type", triggerValue: docType },
@@ -25,17 +27,18 @@ class WorkflowService {
      * Auto-route document through workflow
      */
     static async autoRouteDocument(docId, workflow) {
+        const docObjectId = new mongoose_1.default.Types.ObjectId(String(docId));
         if (!workflow || !workflow.steps || workflow.steps.length === 0) {
             return null;
         }
-        const doc = await Document_1.default.findById(docId);
+        const doc = await Document_1.default.findById(docObjectId);
         if (!doc)
             throw new Error("Document not found");
         const approvals = [];
         for (const step of workflow.steps) {
             for (const approverId of step.approvers) {
                 const approval = await Approval_1.default.create({
-                    docId,
+                    docId: docObjectId,
                     org: doc.org,
                     status: "pending",
                     requestedBy: doc.owner,
@@ -60,9 +63,11 @@ class WorkflowService {
      * Escalate approval to manager
      */
     static async escalateApproval(approvalId, escalateToId) {
-        const approval = await Approval_1.default.findByIdAndUpdate(approvalId, {
+        const approvalObjectId = new mongoose_1.default.Types.ObjectId(String(approvalId));
+        const escalateToObjectId = new mongoose_1.default.Types.ObjectId(String(escalateToId));
+        const approval = await Approval_1.default.findByIdAndUpdate(approvalObjectId, {
             status: "escalated",
-            escalatedTo: escalateToId,
+            escalatedTo: escalateToObjectId,
             escalatedAt: new Date(),
         }, { new: true });
         return approval;
@@ -71,8 +76,9 @@ class WorkflowService {
      * Check if all approvals for document are complete
      */
     static async isApprovalChainComplete(docId) {
+        const docObjectId = new mongoose_1.default.Types.ObjectId(String(docId));
         const pending = await Approval_1.default.countDocuments({
-            docId,
+            docId: docObjectId,
             status: "pending",
         });
         return pending === 0;
@@ -81,8 +87,9 @@ class WorkflowService {
      * Get overdue approvals
      */
     static async getOverdueApprovals(orgId) {
+        const orgObjectId = new mongoose_1.default.Types.ObjectId(String(orgId));
         return Approval_1.default.find({
-            org: orgId,
+            org: orgObjectId,
             status: "pending",
             dueDate: { $lt: new Date() },
         })
@@ -93,7 +100,8 @@ class WorkflowService {
      * Send approval reminder (stub for notification service)
      */
     static async sendApprovalReminder(approvalId) {
-        const approval = await Approval_1.default.findById(approvalId)
+        const approvalObjectId = new mongoose_1.default.Types.ObjectId(String(approvalId));
+        const approval = await Approval_1.default.findById(approvalObjectId)
             .populate("assignee")
             .populate("docId");
         if (!approval || !approval.assignee) {

@@ -77,7 +77,7 @@ export async function createDocument(req: Request, res: Response) {
           await doc.save();
         }
       } catch (e) {
-        console.warn("Text extraction failed", e?.message || e);
+        console.warn("Text extraction failed", (e as any)?.message || e);
       }
     })();
 
@@ -313,7 +313,7 @@ export async function getVersionHistory(req: Request, res: Response) {
     const doc = await Document.findOne({ _id: id, org: user.org });
     if (!doc) return res.status(404).json({ message: "Not found" });
 
-    const history = await DocumentService.getVersionHistory(id);
+    const history = await DocumentService.getVersionHistory(String(id));
     res.json({ history });
   } catch (err) {
     console.error(err);
@@ -332,9 +332,9 @@ export async function restoreVersion(req: Request, res: Response) {
     if (!doc) return res.status(404).json({ message: "Not found" });
 
     const restored = await DocumentService.restoreVersion(
-      id,
+      String(id),
       version,
-      user._id
+      String(user._id)
     );
     res.json({ doc: restored });
   } catch (err) {
@@ -503,7 +503,10 @@ export async function archiveDocument(req: Request, res: Response) {
     const doc = await Document.findOne({ _id: id, org: user.org });
     if (!doc) return res.status(404).json({ message: "Not found" });
 
-    const archived = await DocumentService.archiveDocument(id, user._id);
+    const archived = await DocumentService.archiveDocument(
+      String(id),
+      String(user._id)
+    );
     res.json({ doc: archived });
   } catch (err) {
     console.error(err);
@@ -521,7 +524,11 @@ export async function setLegalHold(req: Request, res: Response) {
     const doc = await Document.findOne({ _id: id, org: user.org });
     if (!doc) return res.status(404).json({ message: "Not found" });
 
-    const updated = await DocumentService.setLegalHold(id, hold, user._id);
+    const updated = await DocumentService.setLegalHold(
+      String(id),
+      hold,
+      String(user._id)
+    );
     res.json({ doc: updated });
   } catch (err) {
     console.error(err);
@@ -539,7 +546,7 @@ export async function addTags(req: Request, res: Response) {
     const doc = await Document.findOne({ _id: id, org: user.org });
     if (!doc) return res.status(404).json({ message: "Not found" });
 
-    const updated = await DocumentService.addTags(id, tags);
+    const updated = await DocumentService.addTags(String(id), tags);
 
     await AuditLog.create({
       org: doc.org,

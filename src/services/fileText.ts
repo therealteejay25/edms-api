@@ -22,7 +22,7 @@ export async function extractTextFromFile(filePath: string) {
     return txt;
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.warn("Failed to extract text", err?.message || err);
+    console.warn("Failed to extract text", (err as any)?.message || err);
     return null;
   }
 }
